@@ -23,10 +23,7 @@
 * Aug 6, 2014
 * Converted to native JavaScript by Edi Supriyadi
 * edisupr@gmail.com
-* Requires two stand-alone plugin: 
-* 1. animJS (for animation) https://github.com/relay/anim
-* 2. HamsterJS (for mousewheel support) https://github.com/monospaced/hamster.js
-* 
+* Requires two stand-alone plugin: animJS (for animation) and HamsterJS (for mousewheel support)
 * Requires my own class element
 * 
 */
@@ -35,6 +32,14 @@
 
 var $chk = function(obj){
     return !!(obj || obj === 0);
+};
+var $merge = function(){
+  var str = '';
+  for(var i = 0; i < arguments.length; i++){
+    var str_temp = JSON.stringify(arguments[i]).substr(1);
+    str = str + (str?',':'') + (str_temp.substr(0,str_temp.length - 1));
+  }
+  return JSON.parse('{' + str + '}');
 };
 
 function $tryCatch(){
@@ -110,6 +115,112 @@ Browser.Plugins.Flash = (function(){
   }
 }*/
 /* end of addEvent */
+
+/*input selection*/
+function getInputSelection(el) {
+    var start = 0, end = 0, normalizedValue, range,
+        textInputRange, len, endRange;
+
+    if (typeof el.selectionStart == "number" && typeof el.selectionEnd == "number") {
+        start = el.selectionStart;
+        end = el.selectionEnd;
+    } else {
+        range = document.selection.createRange();
+
+        if (range && range.parentElement() == el) {
+            len = el.value.length;
+            normalizedValue = el.value.replace(/\r\n/g, "\n");
+
+            // Create a working TextRange that lives only in the input
+            textInputRange = el.createTextRange();
+            textInputRange.moveToBookmark(range.getBookmark());
+
+            // Check if the start and end of the selection are at the very end
+            // of the input, since moveStart/moveEnd doesn't return what we want
+            // in those cases
+            endRange = el.createTextRange();
+            endRange.collapse(false);
+
+            if (textInputRange.compareEndPoints("StartToEnd", endRange) > -1) {
+                start = end = len;
+            } else {
+                start = -textInputRange.moveStart("character", -len);
+                start += normalizedValue.slice(0, start).split("\n").length - 1;
+
+                if (textInputRange.compareEndPoints("EndToEnd", endRange) > -1) {
+                    end = len;
+                } else {
+                    end = -textInputRange.moveEnd("character", -len);
+                    end += normalizedValue.slice(0, end).split("\n").length - 1;
+                }
+            }
+        }
+    }
+
+    return {
+        start: start,
+        end: end
+    };
+}
+
+function offsetToRangeCharacterMove(el, offset) {
+  return offset - (el.value.slice(0, offset).split("\r\n").length - 1);
+}
+
+function setInputSelection(el, startOffset, endOffset) {
+    el.focus();
+    if (typeof el.selectionStart == "number" && typeof el.selectionEnd == "number") {
+        el.selectionStart = startOffset;
+        el.selectionEnd = endOffset;
+    } else {
+        var range = el.createTextRange();
+        var startCharMove = offsetToRangeCharacterMove(el, startOffset);
+        range.collapse(true);
+        if (startOffset == endOffset) {
+            range.move("character", startCharMove);
+        } else {
+            range.moveEnd("character", offsetToRangeCharacterMove(el, endOffset));
+            range.moveStart("character", startCharMove);
+        }
+        range.select();
+    }
+}
+
+/*element*/
+var element = function(){
+	var el = document.createElement(arguments[0]);
+	var options = arguments[1];
+	for(var item in options){
+		switch(item){
+			case 'style': this.setStyle(el, options[item]); break;
+			case 'event': this.attachEvent(el,options[item]); break;
+			default: el[item] = options[item];
+		}
+	}
+	this.el = el;
+	var return_element = false;
+	if(arguments[2]){
+		return_element = arguments[2];
+	}
+	return return_element?el:this;
+};
+element.prototype = {
+	setStyle: function(el,styles){
+		for(var item in styles){
+			el.style[item] = styles[item];
+		}
+		return el;
+	},
+	inject: function(parent){
+		parent.appendChild(this.el);
+		return this.el;
+	},
+	attachEvent: function(el,event){
+		el.addEventListener(event[0],event[1]);
+		return el;
+	}
+};
+/*end of element*/
 
 var $empty = function(){};
 
