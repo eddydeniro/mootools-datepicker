@@ -1,4 +1,4 @@
-# mootools-datepicker
+# xmootools-datepicker
 Smoothly animating, very configurable and easy to install. No Ajax, pure Javascript, and without Mootools :).
 
 For those who love this datepicker, like I do, but don't want to be dependent to Mootools library, here I'm "trying" to remove that dependency while adding some features like mouse scrolling and keyboard editing.
